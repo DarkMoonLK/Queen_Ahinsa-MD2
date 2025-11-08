@@ -6,7 +6,7 @@
 
 
  <img src="https://i.imgur.com/dBaSKWF.gif" height="90" width="100%">
-<h1>.              🌟OFFICIAL🌟.          </h1>
+<h1>              🌟OFFICIAL🌟           </h1>
 
 <<a><img src='https://i.ibb.co/SR76mBh/Pu3-ZYHBS5139.jpg'/></a>
 </p>
@@ -25,7 +25,7 @@
 <br>
 
 
-## 🎀 STEP 02 -  Get Session
+ 🎀 STEP 02 -  Get Session
 
 <a href="https://pair-web-public.koyeb.app/"><img src="https://img.shields.io/badge/QR%20OR%20PAIR%20CODE-blue" alt="GET SESSION" width="200"></a>
 
@@ -58,7 +58,7 @@
 <hr>
 
 
-# copy github workflowr
+```
  name: Node.js CI
 
 on:
@@ -92,6 +92,9 @@ jobs:
 
    - name: Start application
       run: npm start
+
+```
+
 
 <a><img src='https://i.imgur.com/LyHic3i.gif'/></a>
 
