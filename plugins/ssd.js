@@ -1,6 +1,6 @@
-// 🎬 SINHALASUB MOVIE SEARCH & AUTO DOWNLOAD
-// API by sadaslk-apis.vercel.app
-// Stable Edition by Wasantha X GPT
+// 🎬 SINHALASUB MOVIE SEARCH + DOWNLOAD
+// API : sadaslk-apis.vercel.app
+// Fixed + Stable Version by Wasantha X GPT
 
 const consoleLog = console.log;
 const config = require('../config');
@@ -8,129 +8,114 @@ const { cmd } = require('../command');
 const axios = require('axios');
 const NodeCache = require('node-cache');
 
-const searchCache = new NodeCache({ stdTTL: 60, checkperiod: 120 });
-const BRAND = '' + (config.MOVIE_FOOTER || 'Cinesubz ©2025');
+const cache = new NodeCache({ stdTTL: 60, checkperiod: 120 });
+const BRAND = config.MOVIE_FOOTER || 'Cinesubz ©2025';
 
-// 🔑 API info
+// 🔑 API Config
 const API_KEY = 'c56182a993f60b4f49cf97ab09886d17';
 const SEARCH_URL = 'https://sadaslk-apis.vercel.app/api/v1/movie/sinhalasub/search';
 const INFO_URL = 'https://sadaslk-apis.vercel.app/api/v1/movie/sinhalasub/infodl';
 
+// 🎬 Main command
 cmd({
   pattern: 'sinhalasub',
-  react: '🎬',
-  desc: 'Search SinhalaSub movies and auto-download',
+  react: '🎥',
+  desc: 'Search SinhalaSub movies + download links',
   category: 'Movie / TV',
   filename: __filename
 }, async (client, m, msg, { from, q }) => {
 
-  const USAGE = '*🎬 SinhalaSub Search*\n\nUsage: .sinhalasub <movie name>\nExample: .sinhalasub Venom\n\nType your movie name 🔍';
+  const usage = '*🎬 SinhalaSub Movie Search*\n\nUsage: .sinhalasub <movie name>\nExample: .sinhalasub 2024\n\nSearch Sinhala-subtitled movies and get direct links.';
 
-  if (!q) return client.sendMessage(from, { text: USAGE }, { quoted: m });
+  if (!q) return client.sendMessage(from, { text: usage }, { quoted: m });
 
   try {
-    const cacheKey = 'sinhalasub_' + q.toLowerCase();
-    let results = searchCache.get(cacheKey);
+    const cacheKey = 'ss_' + q.toLowerCase();
+    let results = cache.get(cacheKey);
 
-    // 🧭 Fetch search results
     if (!results) {
       const res = await axios.get(`${SEARCH_URL}?q=${encodeURIComponent(q)}&apiKey=${API_KEY}`);
-      if (!res.data || !Array.isArray(res.data.data) || res.data.data.length === 0) {
-        throw new Error('❌ No results found.');
-      }
+      if (!res.data?.data?.length) throw new Error('No movies found.');
       results = res.data.data;
-      searchCache.set(cacheKey, results);
+      cache.set(cacheKey, results);
     }
 
-    // 📋 Build search result caption
-    let caption = '*🎬 SinhalaSub Results*\n\n';
+    let text = '*🎬 SinhalaSub Search Results*\n\n';
     results.forEach((r, i) => {
-      caption += `${i + 1}. ${r.title || 'Unknown Title'} (${r.year || 'N/A'})\n⭐ IMDb: ${r.imdb || 'N/A'}\n\n`;
+      text += `${i + 1}. ${r.title || 'Unknown Title'} (${r.year || 'N/A'})\n⭐ IMDb: ${r.imdb || 'N/A'}\n\n`;
     });
-    caption += '👉 Reply with number to get download links.\n\n_© ' + BRAND + '_';
+    text += '👉 Reply with number to get download links.\n\n_© ' + BRAND + '_';
 
-    const sentMsg = await client.sendMessage(from, {
+    const sent = await client.sendMessage(from, {
       image: { url: results[0]?.poster || results[0]?.thumbnail || '' },
-      caption
+      caption: text
     }, { quoted: m });
 
-    // 🎯 Step 2: Handle movie selection
+    // 📥 Handle reply (movie pick)
     const handleReply = async ({ messages }) => {
-      const incoming = messages?.[0];
-      if (!incoming?.message?.conversation) return;
-      const text = incoming.message.conversation.trim();
-      const num = parseInt(text, 10);
-
+      const rMsg = messages?.[0];
+      const body = rMsg?.message?.conversation?.trim();
+      if (!body) return;
+      const num = parseInt(body, 10);
       if (isNaN(num) || num < 1 || num > results.length) return;
-      const movie = results[num - 1];
-      if (!movie?.link) {
-        await client.sendMessage(from, { text: '❌ Invalid movie link.' }, { quoted: incoming });
-        return;
-      }
 
-      // 🎬 Fetch movie info
+      const movie = results[num - 1];
+      if (!movie?.link) return client.sendMessage(from, { text: '❌ No valid movie link found.' }, { quoted: rMsg });
+
       const infoUrl = `${INFO_URL}?q=${encodeURIComponent(movie.link)}&apiKey=${API_KEY}`;
       const infoRes = await axios.get(infoUrl);
-      const movieData = infoRes.data?.data;
+      const data = infoRes.data?.data;
+      if (!data) return client.sendMessage(from, { text: '❌ No detailed info found.' }, { quoted: rMsg });
 
-      if (!movieData) {
-        await client.sendMessage(from, { text: '❌ Movie details not found.' }, { quoted: incoming });
-        return;
-      }
+      const downloads = data.downloads || [];
+      if (!downloads.length) return client.sendMessage(from, { text: '❌ No download links available.' }, { quoted: rMsg });
 
-      const downloads = Array.isArray(movieData.downloads) ? movieData.downloads : [];
-
-      if (!downloads.length) {
-        await client.sendMessage(from, { text: '❌ No download links available.' }, { quoted: incoming });
-        return;
-      }
-
-      let cap2 = `🎬 *${movieData.title || 'Unknown Title'}*\n\n⭐ IMDb: ${movieData.imdb || 'N/A'}\n📅 Year: ${movieData.year || 'N/A'}\n\n📥 *Select Quality:*\n`;
+      let caption = `🎬 *${data.title || 'Unknown Title'}*\n\n⭐ IMDb: ${data.imdb || 'N/A'}\n📅 Year: ${data.year || 'N/A'}\n\n📥 *Available Qualities:*\n`;
       downloads.forEach((d, i) => {
-        cap2 += `${i + 1}. [${d.quality || 'Unknown'}] ${d.size || 'N/A'}\n`;
+        caption += `${i + 1}. [${d.quality || 'N/A'}] ${d.size || 'N/A'}\n`;
       });
-      cap2 += '\nReply with number to download. 📽️\n\n_© ' + BRAND + '_';
+      caption += '\nReply with number to download.\n\n_© ' + BRAND + '_';
 
       const pickMsg = await client.sendMessage(from, {
-        image: { url: movieData.poster || movieData.thumbnail || '' },
-        caption: cap2
-      }, { quoted: incoming });
+        image: { url: data.poster || data.thumbnail || '' },
+        caption
+      }, { quoted: rMsg });
 
-      // 🎬 Step 3: Handle download quality selection
+      // 🎬 Handle download pick
       const handlePick = async ({ messages }) => {
-        const pickIncoming = messages?.[0];
-        if (!pickIncoming?.message?.conversation) return;
+        const pMsg = messages?.[0];
+        const body2 = pMsg?.message?.conversation?.trim();
+        if (!body2) return;
+        const pick = parseInt(body2, 10);
+        if (isNaN(pick) || pick < 1 || pick > downloads.length) return;
 
-        const pickNum = parseInt(pickIncoming.message.conversation.trim(), 10);
-        if (isNaN(pickNum) || pickNum < 1 || pickNum > downloads.length) return;
-
-        const choice = downloads[pickNum - 1];
+        const choice = downloads[pick - 1];
         const link = choice?.link;
         const size = choice?.size || 'Unknown';
-        const fileName = `SINHALASUB • ${movieData.title || 'Movie'} • ${choice.quality || 'Video'}.mp4`;
+        const fileName = `SINHALASUB • ${data.title || 'Movie'} • ${choice.quality || ''}.mp4`;
 
-        if (!link) {
-          await client.sendMessage(from, { text: '❌ No valid link found.' }, { quoted: pickIncoming });
+        if (!link || link === '' || typeof link !== 'string') {
+          await client.sendMessage(from, { text: `❌ No valid file link found for ${data.title}.` }, { quoted: pMsg });
           return;
         }
 
         const sizeGB = parseSizeToGB(size);
         if (sizeGB > 2) {
-          await client.sendMessage(from, { text: `⚠️ File too large (${size}). Direct link:\n${link}` }, { quoted: pickIncoming });
+          await client.sendMessage(from, { text: `⚠️ File too large (${size}). Direct link:\n${link}` }, { quoted: pMsg });
           return;
         }
 
         try {
           await client.sendMessage(from, {
-            document: { url: link.toString() },
+            document: { url: link },
             mimetype: 'video/mp4',
             fileName,
-            caption: `🎬 ${movieData.title}\n📥 ${choice.quality || ''} (${size})\n\n${BRAND}`
-          }, { quoted: pickIncoming });
-
-          await client.sendMessage(from, { react: { text: '✅', key: pickIncoming.key } });
-        } catch (err) {
-          await client.sendMessage(from, { text: `❌ Failed to send.\nDirect link:\n${link}` }, { quoted: pickIncoming });
+            caption: `🎬 ${data.title}\n📥 ${choice.quality || ''} (${size})\n\n${BRAND}`
+          }, { quoted: pMsg });
+          await client.sendMessage(from, { react: { text: '✅', key: pMsg.key } });
+        } catch (e) {
+          consoleLog('⚠️ FILE SEND ERROR:', e.message);
+          await client.sendMessage(from, { text: `❌ Failed to send file.\nDirect link:\n${link}` }, { quoted: pMsg });
         }
       };
 
@@ -140,16 +125,16 @@ cmd({
     client.ev.on('messages.upsert', handleReply);
 
   } catch (err) {
-    consoleLog(err);
+    consoleLog('❌ ERROR:', err);
     await client.sendMessage(from, { text: '❌ Error: ' + (err.message || String(err)) }, { quoted: m });
   }
 });
 
-// 🧩 Size parser (safe)
-function parseSizeToGB(sizeStr) {
-  if (!sizeStr) return 0;
-  const safeStr = String(sizeStr || '').trim().toUpperCase();
-  if (safeStr.endsWith('GB')) return parseFloat(safeStr) || 0;
-  if (safeStr.endsWith('MB')) return (parseFloat(safeStr) || 0) / 1024;
+// 🔧 Safe size parser
+function parseSizeToGB(size) {
+  if (!size) return 0;
+  const s = String(size).trim().toUpperCase();
+  if (s.endsWith('GB')) return parseFloat(s) || 0;
+  if (s.endsWith('MB')) return (parseFloat(s) || 0) / 1024;
   return 0;
 }
