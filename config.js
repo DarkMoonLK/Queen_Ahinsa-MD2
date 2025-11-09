@@ -6,7 +6,7 @@ function convertToBool(text, fault = 'true') {
 }
 module.exports = {
 SESSION_ID: process.env.SESSION_ID || "𝚀𝚞𝚎𝚎𝚗_𝙰𝚑𝚒𝚗𝚜𝚊-𝚞𝚒𝚍~yFtAwTpJ#vTRXrwu42QEJLWOHF2a7N_RekfawWVTrUAiL9BGgsx8",
-MONGODB: process.env.MONGODB || "mongodb://mongo:zErWNEQUjUFgNPqDykEYqXXvWOxliqLW@tramway.proxy.rlwy.net:20214",
+MONGODB: process.env.MONGODB || "mongodb://mongo:eqxpNhoWMVrQMooklOriXepfSwvhMkrj@maglev.proxy.rlwy.net:10749",
 };
 
 // ===== use session name 𝚀𝚞𝚎𝚎𝚗_𝙰𝚑𝚒𝚗𝚜𝚊-𝚞𝚒𝚍~
